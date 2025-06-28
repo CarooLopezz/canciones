@@ -1,36 +1,47 @@
-# crear ,leer,actualizar y eliminar los datos de los vengadores logica
 import os
-from flask import Blueprint
+from flask import Blueprint, jsonify
 from backend.models.db import db
-from backend.models.canciones import Musica  # tu modelo se llama Musica, está bien así
+from backend.models.canciones import Musica 
 
-# El blueprint se llama 'musica', pero el archivo sigue en la carpeta 'canciones'
+
 musica = Blueprint('musica', __name__, url_prefix='/musica')
 
-
-@musica.route('/', methods=['GET'])
-def listar_canciones():
-    canciones_activas = Musica.query.filter_by(activo=True).order_by(Musica.id).all()
-    salida = ""
-    for c in canciones_activas:
-        salida += f"{c.id} | {c.cancion} | {c.artista} | {c.duracion} seg\n"
-    return f"<pre>{salida}</pre>"
+@musica.route('/api/spotify/canciones', methods=['GET'])
+def get_canciones_activas():
+    canciones = Musica.query.filter_by(activo=True).all()
+    return jsonify([c.serialize() for c in canciones])
 
 
-@musica.route('/duracion', methods=['GET'])
-def listar_por_duracion():
-    canciones = Musica.query.filter_by(activo=True).order_by(Musica.duracion).all()
-    salida = ""
-    for c in canciones:
-        salida += f"{c.id} | {c.cancion} | {c.artista} | {c.duracion} seg\n"
-    return f"<pre>{salida}</pre>"
-
-
-@musica.route('/baja/<int:id>', methods=['GET'])
-def dar_de_baja(id):
+@musica.route('/api/spotify/canciones/<int:id>', methods=['DELETE'])
+def baja_logica_cancion(id):
     cancion = Musica.query.get_or_404(id)
     if not cancion.activo:
-        return f"<pre>La canción '{cancion.cancion}' ya estaba dada de baja.</pre>"
+        return jsonify({"mensaje": "La canción ya estaba inactiva."}), 400
     cancion.activo = False
     db.session.commit()
-    return f"<pre>Canción '{cancion.cancion}' dada de baja correctamente.</pre>"
+    return jsonify({"mensaje": f"Canción '{cancion.cancion}' dada de baja."})
+
+
+@musica.route('/api/spotify/canciones/clasificadas', methods=['GET'])
+def clasificar_por_duracion():
+    canciones = Musica.query.filter_by(activo=True).all()
+
+    cortas = []
+    medias = []
+    largas = []
+
+    for c in canciones:
+        if c.duracion is None:
+            continue 
+        if c.duracion < 180:
+            cortas.append(c.serialize())
+        elif 180 <= c.duracion <= 240:
+            medias.append(c.serialize())
+        elif c.duracion > 340:
+            largas.append(c.serialize())
+
+    return jsonify({
+        "cortas": cortas,
+        "medias": medias,
+        "largas": largas
+    })

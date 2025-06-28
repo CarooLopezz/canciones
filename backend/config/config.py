@@ -2,7 +2,7 @@
 from dotenv import load_dotenv
 import os
 
-load_dotenv("C:/Users/SONY/Documents/avengers/.env")
+load_dotenv("C:/Users/SONY/Documents/canciones/.env")
 
 user = os.getenv("MYSQL_USER")
 print(os.getenv("MYSQL_USER")) 
